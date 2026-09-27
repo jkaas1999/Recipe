@@ -72,10 +72,51 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 // ---------- Share-target handling ----------
-const params = new URLSearchParams(window.location.search);
-const sharedText = params.get('text') || params.get('url') || params.get('title') || '';
-if (sharedText) document.getElementById('caption').value = decodeURIComponent(sharedText);
+// Replace with your actual Cloudflare Worker URL
+const SCRAPER_ENDPOINT = 'https://wispy-thunder-8136.jkaas1999.workers.dev/';
 
+const params = new URLSearchParams(window.location.search);
+const incoming = params.get('text') || params.get('url') || params.get('title') || '';
+
+if (incoming) {
+  const decoded = decodeURIComponent(incoming).trim();
+  const captionEl = document.getElementById('caption');
+  const statusEl = document.getElementById('status');
+
+  // Match any incoming URL from Facebook, Instagram, or TikTok
+  const urlRegex = /(https?:\/\/[^\s]+)/i;
+  const match = decoded.match(urlRegex);
+
+  if (match) {
+    const targetUrl = match[0];
+    statusEl.textContent = 'Resolving recipe link...';
+
+    fetch(SCRAPER_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: targetUrl }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.text) {
+          captionEl.value = `${data.title ? data.title + '\n\n' : ''}${data.text}`;
+          statusEl.textContent = 'Recipe loaded! Parsing...';
+          document.getElementById('parse-btn').click();
+        } else {
+          captionEl.value = decoded;
+          statusEl.textContent = "Couldn't read caption from link. Please copy/paste text directly.";
+        }
+      })
+      .catch(() => {
+        captionEl.value = decoded;
+        statusEl.textContent = 'Link resolve failed. Please paste the caption manually.';
+      });
+  } else {
+    // Raw text was shared directly
+    captionEl.value = decoded;
+    document.getElementById('parse-btn').click();
+  }
+}
 // ---------- Caption parsing (rule-based, no AI, no network) ----------
 function parseCaption(raw) {
   const lines = raw.split(/\r?\n/).map(l => l.trim());
