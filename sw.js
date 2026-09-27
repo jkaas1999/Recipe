@@ -1,4 +1,4 @@
-const CACHE = 'caption-recipe-v2';
+const CACHE = 'caption-recipe-v3';
 const ASSETS = ['./', './index.html', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (event) => {
